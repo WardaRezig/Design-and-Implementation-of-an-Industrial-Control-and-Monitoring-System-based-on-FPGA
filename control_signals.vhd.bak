@@ -1,0 +1,139 @@
+library ieee;
+use ieee. std_logic_1164.all;
+use ieee. std_logic_unsigned.all;
+ 
+entity control_signals is
+PORT(i_CLOCK:     in std_logic;
+     o_start, o_A0 :   out std_logic;
+      --o_ALE :   out std_logic;
+   mod_50_clock : buffer std_logic;
+   D: in std_logic_vector (7 downto 0);
+   led_R: out std_logic_vector (7 downto 0);
+   led: out std_logic_vector (7 downto 0));
+end entity;
+
+
+architecture behavioral of control_signals is
+signal state50: std_logic_vector (19 downto 0);
+signal counter: integer range 0 to 49; 
+signal output_ctrl: std_logic_vector (1 downto 0);  
+signal sig_A0: std_logic;
+ -- A0&start&ALE
+--signal signal_stable: std_logic; --clock used to get mod 50
+
+begin
+
+
+--signal_2500Hz: process(i_CLOCK)
+--begin
+--if(i_CLOCK='1' and i_CLOCK'EVENT) then
+--if state2500=19999 then state2500<= (others =>'0');
+-- else state2500 <= state2500+1;
+--end if;
+--end if;
+--end process;
+--
+--mod_50_clock<= state2500(14);
+signal_50Hz: process(i_CLOCK)  -- main clock divided by 1 milion to get 50 hz
+begin
+if(i_CLOCK='1' and i_CLOCK'EVENT) then
+if state50=9999999 then state50<= (others =>'0');
+ else state50 <= state50+1;
+end if;
+end if;
+end process;
+
+mod_50_clock<= state50(19);
+
+
+
+
+mod_50: process(mod_50_clock) --- counter to get 1s period of A0
+begin
+	if(mod_50_clock='1' and mod_50_clock'EVENT) then
+		if counter=49 then 
+			counter <= 0;
+		else counter <= counter+1;
+		end if;
+	end if;
+end process;
+
+process(counter)
+begin 
+
+  --if(signal_stable='1' and signal_stable'EVENT) then
+
+case counter is 
+                    when 0 => output_ctrl <= "01";
+					when 1 => output_ctrl <= "01";
+					when 2 => output_ctrl <= "01";
+					when 3 => output_ctrl <= "01";
+					when 4 => output_ctrl <= "00";
+					when 5 => output_ctrl <= "00";
+					when 6 => output_ctrl <= "00";
+					when 7 => output_ctrl <= "00";
+					when 8 => output_ctrl <= "00";
+					when 9 => output_ctrl <= "00";
+					when 10=> output_ctrl <= "00";
+					when 11 => output_ctrl <= "00";
+					when 12 => output_ctrl <= "00";
+					when 13 => output_ctrl <= "00";
+					when 14 => output_ctrl <= "00";
+					when 15 => output_ctrl <= "00";
+					when 16 => output_ctrl <= "00";
+					when 17 => output_ctrl <= "00";
+					when 18 => output_ctrl <= "00";
+					when 19 => output_ctrl <= "00";
+					when 20 => output_ctrl <= "00";
+					when 21 => output_ctrl <= "00";
+					when 22 => output_ctrl <= "00";
+					when 23 => output_ctrl <= "00";
+					when 24 => output_ctrl <= "00";
+					led_R<=D;
+					when 25 => output_ctrl <= "11";
+					when 26 => output_ctrl <= "11";
+					when 27 => output_ctrl <= "11";
+					when 28 => output_ctrl <= "11";
+					when 29 => output_ctrl <= "10";
+					when 30 => output_ctrl <= "10";
+
+					when 31 => output_ctrl <= "10";
+					when 32 => output_ctrl <= "10";
+					when 33 => output_ctrl <= "10";
+					when 34 => output_ctrl <= "10";
+					when 35 => output_ctrl <= "10";
+					when 36 => output_ctrl <= "10";
+					when 37 => output_ctrl <= "10";
+					when 38 => output_ctrl <= "10";
+					when 39 => output_ctrl <= "10";
+					when 40 => output_ctrl <= "10";
+
+					when 41 => output_ctrl <= "10";
+					when 42 => output_ctrl <= "10";
+					when 43 => output_ctrl <= "10";
+					when 44 => output_ctrl <= "10";
+					when 45 => output_ctrl <= "10";
+					when 46 => output_ctrl <= "10";
+					when 47 => output_ctrl <= "10";
+					when 48 => output_ctrl <= "10";
+					when 49 => output_ctrl <= "10";
+					led <=D;
+
+end case;
+ --end if;
+end process ;
+
+sig_A0 <= output_ctrl(1);
+--o_ALE <= output_ctrl(0);
+o_start <= output_ctrl (0);
+
+
+--process (sig_A0)
+--begin
+--case sig_A0 is
+--when '0' => led<=D;
+--when others => led_R <=D;
+--end case;
+--end process;
+--o_A0<= sig_a0;
+--end behavioral;

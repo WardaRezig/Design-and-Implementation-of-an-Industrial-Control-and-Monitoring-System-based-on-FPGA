@@ -1,0 +1,164 @@
+LIBRARY ieee;
+USE ieee.std_logic_1164.all;
+use ieee.std_logic_unsigned.all;
+
+ENTITY lcd_driver IS
+  PORT(
+      clk           					 : in  STD_LOGIC;  --system clock
+		clk_500k							 : in std_logic;
+		adc_data_in			 			 : in std_logic_vector( 4 downto 0);
+		lcd_power,lcd_backlight 	 : out STD_LOGIC;
+      rw, rs, e 						 : out STD_LOGIC;  --read/write, setup/data, and enable for lcd
+      lcd_data  						 : out STD_LOGIC_VECTOR(7 downto 0)); --data signals for lcd
+END entity;
+
+ARCHITECTURE behavior OF lcd_driver IS
+  SIGNAL   lcd_enable 									: STD_LOGIC;
+  SIGNAL   lcd_bus    									: STD_LOGIC_VECTOR(9 downto 0);
+  SIGNAL   lcd_busy  								   : STD_LOGIC;
+  signal   data_memo  									: std_LOGIC_VECTOR(7 downto 0);
+  signal   sig_digit0, sig_digit1, sig_digit2, sig_digit3  : std_logic_vector(9 downto 0):= "10"& x"20"; -- initialization 
+  
+  --signal char :std_logic_vector(7 downto 0):=x"01";
+	signal cnt	:std_logic_vector(31 downto 0):=x"00000000";
+	signal rst	:std_LOGIC:='1';
+	
+	
+
+  COMPONENT lcd_controller IS
+    PORT(
+       clk        : in  STD_LOGIC; --system clock
+       reset_n    : in  STD_LOGIC; --active low reinitializes lcd
+       lcd_enable : in  STD_LOGIC; --latches data into lcd controller
+       lcd_bus    : in  STD_LOGIC_VECTOR(9 downto 0); --data and control signals
+       busy       : out STD_LOGIC; --lcd controller busy/idle feedback
+       rw, rs, e  : out STD_LOGIC; --read/write, setup/data, and enable for lcd
+       lcd_data   : out STD_LOGIC_VECTOR(7 downto 0)); --data signals for lcd
+  END COMPONENT;
+  
+component  adc_data_co2_conversion 
+  PORT(
+      clk         : in  STD_LOGIC;  --system clock
+		i_adc_data  : in std_logic_vector(4 downto 0k);
+		o_digit0		: out std_logic_vector(9 downto 0);
+		o_digit1	   : out std_logic_vector(9 downto 0);
+		o_digit2    : out std_logic_vector(9 downto 0);
+		o_digit3    : out std_logic_vector(9 downto 0));
+	end component;
+	
+BEGin
+	
+  --instantiate the lcd controller
+  dut: lcd_controller
+    PORT MAP(clk => clk, reset_n => rst, lcd_enable => lcd_enable, lcd_bus => lcd_bus, --reset_n => rst
+             busy => lcd_busy, rw => rw, rs => rs, e => e, lcd_data => lcd_data);
+ CO2: adc_data_co2_conversion
+    port map (clk => clk, i_adc_data => adc_data_in, 
+				  o_digit0 => sig_digit0,o_digit1 => sig_digit1,o_digit2 => sig_digit2, o_digit3 => sig_digit3);
+  
+	  PROCESS(clk)
+    
+	 VARIABLE char  :  INTEGER RANGE 0 TO 41 := 0;
+	 
+  BEGIN
+    IF(clk'EVENT AND clk = '1') THEN
+	 
+      IF(lcd_busy = '0' AND lcd_enable = '0') THEN -- 
+        lcd_enable <= '1';
+        IF(char < 41 ) THEN
+				char := char + 1;
+        END IF;
+        CASE char IS
+			
+          WHEN 1 => lcd_bus <= "10"& x"43";	--C			--67 79 50 58 32 37 						
+          WHEN 2 => lcd_bus <= "10"& x"4F";	--O							
+          WHEN 3 => lcd_bus <= "10"& x"32";  --2
+          WHEN 4 => lcd_bus <= "10"& x"3a";	--:							
+          WHEN 5 => lcd_bus <= "10"& x"20";  -- sp
+          WHEN 6=> lcd_bus <= "10"&  x"20";  -- sp
+          WHEN 7 => lcd_bus <= "10"& x"30"; -- 0
+          WHEN 8 => lcd_bus <= "10"& x"2E"; ---.
+          WHEN 9 => lcd_bus <= "10"& sig_digit2(7 dowNTO 0);			 
+			 WHEN 10 => lcd_bus <= "10"& sig_digit1(7 dowNTO 0);
+          WHEN 11 => lcd_bus <= "10"& sig_digit0(7 dowNTO 0);
+          WHEN 12 => lcd_bus <= "10"& x"25";	-- %							
+          WHEN 13 => lcd_bus <= "10"& x"20";				 					
+          WHEN 14 => lcd_bus <= "10"& x"20"; 				
+			 WHEN 15 => lcd_bus <= "10"& x"20";			 				
+			 WHEN 16 => lcd_bus <= "10"& x"20";	
+			 
+			 WHEN 17 => lcd_bus <= "0011000000";
+        
+			 
+			 WHEN 25 => lcd_bus <= "10"& x"54";  -- digit 17
+			 WHEN 26 => lcd_bus <= "10"& x"45"; 
+			 WHEN 27 => lcd_bus <= "10"& x"4d"; 
+          WHEN 28 => lcd_bus <= "10"& x"50"; 
+          WHEN 29 => lcd_bus <= "10"& x"45";
+          WHEN 30 => lcd_bus <= "10"& x"52"; 
+          WHEN 31 => lcd_bus <= "10"& x"41"; 
+			 WHEN 32 => lcd_bus <= "10"& x"54"; 
+			 WHEN 33 => lcd_bus <= "10"& x"55"; 
+			 WHEN 34 => lcd_bus <= "10"& x"52";
+			 WHEN 35 => lcd_bus <= "10"& x"45"; 
+			 WHEN 36 => lcd_bus <= "10"& x"3a";
+          WHEN 37 => lcd_bus <= "10"& x"20"; 
+          WHEN 38 => lcd_bus <= "1000111001"; 
+          WHEN 39 => lcd_bus <= "1000110000"; 
+          WHEN 40 => lcd_bus <= "10"& x"43";  -- digit 32
+			-- WHEN 41 => lcd_bus <=  "0011000000";
+							char := 0;		
+							   						
+          WHEN OTHERS => lcd_enable <= '0';
+        END CASE;
+      ELSE
+        lcd_enable <= '0';
+      END IF;
+    END IF;
+	 
+  END PROCESS;	
+
+  
+ 	process(clk)
+	begin
+		if(clk'event and clk='1') then 
+			if (cnt < x"02f0d180" ) then -- 5 000 000 clk cycles : 100 ms (004c4b40) --02f0d180: best value
+				cnt <= cnt+1;
+				rst <= '1';
+			elsif (cnt = x"02f0d180" ) then
+				cnt <= x"00000000";
+				rst <= '0';
+			else 
+				cnt <= x"00000000";
+				rst <= '0';
+			end if;
+		end if;
+	end process;
+	
+  lcd_power <= '1';
+  lcd_backlight <= '1';
+END behavior;
+
+
+
+
+
+--  PROCESS(clk)   
+-- 
+--  BEGin
+--  
+--    IF(clk'EVENT AND clk= '1') THEN
+--	 
+--      IF(lcd_busy = '0' AND lcd_enable = '0') THEN 
+--        lcd_enable <= '1';	  
+--		  if addr < 16 then 
+--			  addr <= addr +1;     
+--		  else 
+--			  addr <= "000000";
+--		  end if; 
+--		  lcd_bus    <= "10" & data_memo;  
+--      ELSE
+--        lcd_enable <= '0';
+--      END IF;
+--    END IF;
+--  END PROCESS;

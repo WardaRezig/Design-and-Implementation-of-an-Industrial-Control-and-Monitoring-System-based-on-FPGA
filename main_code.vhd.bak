@@ -1,0 +1,77 @@
+library ieee;
+use ieee. std_logic_1164.all;
+use ieee. std_logic_unsigned.all;
+ 
+entity main_code is
+PORT(CLOCK:     in std_logic; -- main clock
+     clk_slow:  buffer std_logic; -- ADC clock
+      start:    out std_logic;
+       A0:      out std_logic;
+       --ALE:      out std_logic;
+	   D:       in std_logic_vector (7 downto 0); -- input
+     Led:       out std_logic_vector (7 downto 0); -- output
+     led_R: out std_logic_vector (7 downto 0);
+--     GREEN_led, RED_led, danger: out std_logic;
+     
+      --LCD display control signals 
+	  lcd_power       : 	out std_logic;
+	  lcd_backlight   : 	out std_logic;
+     rw, rs, e       : 	out std_logic;  --read/write, setup/data, and enable for lcd
+     lcd_data        : 	out std_logic_vector(7 DOWNTO 0));
+end main_code; 
+ 
+architecture behavioral of main_code is
+signal safe: std_logic;
+
+	component clock_divider 
+		port (i_CLOCK:        in std_logic;
+			  o_clk_slow:     out std_logic);     
+	end component; 
+  
+	component control_signals 
+		port (i_CLOCK:              in std_logic;
+              o_start, o_A0 :       out std_logic;
+              D: in std_logic_vector (7 downto 0);
+              led_R: out std_logic_vector (7 downto 0);
+              led: out std_logic_vector (7 downto 0));   
+	end component;  
+ 
+  
+ component lcd_driver 
+	  PORT(
+			clk       : IN  std_logic;  --system clock
+			clk_500k							 : in std_logic;
+			adc_data_in : in std_logic_vector( 4 downto 0);
+			lcd_power,lcd_backlight : out std_logic;
+			rw, rs, e : out std_logic;  --read/write, setup/data, and enable for lcd
+			lcd_data  : out std_logic_vector(7 DOWNTO 0)); --data signals for lcd
+	END component;
+	 
+begin
+
+ C1 : clock_divider 
+ port map (i_CLOCK => CLOCK, o_clk_slow=> clk_slow ); 
+ 
+ C2: control_signals
+ port map (i_CLOCK => CLOCK, o_start =>start, o_A0=>A0, d=>d, led=>led, led_r=>led_R); 
+ 
+ 
+lcd_display : lcd_driver         
+port map (clk => CLOCK,clk_500k => clk_slow, adc_data_in =>D(7 downto 3), lcd_power => lcd_power,
+		 lcd_backlight => lcd_backlight, rw => rw, rs => rs, e=>e, lcd_data => lcd_data);
+
+--
+--monitoring: process(CLOCK,D)
+--begin 
+--if D< x"80"  then safe<= '1';
+--else safe<= '0';
+--end if;
+--if D>x"c0" then danger <= '1';
+--else danger <= '0';
+--end if ;
+--GREEN_led <= safe;
+--RED_led <= not safe;
+--end process;
+--
+--
+end behavioral;
